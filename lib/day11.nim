@@ -26,9 +26,6 @@ proc parseMonkey(monkeyDesc: seq[string]): Monkey =
     ifFalseMonkeyId: monkeyDesc[5].split(" monkey ")[1].parseInt(),
   )
 
-var monkeys = monkeysDesc.mapIt(parseMonkey(it))
-var inspectionCount = initCountTable[int]()
-
 proc calculateOperation(item: int, monkey: Monkey): int =
   let operandA = case monkey.operandA:
     of "old":
@@ -55,7 +52,7 @@ proc calculateOperation(item: int, monkey: Monkey): int =
       result = -1
   
 
-proc playRound() = 
+proc playRound(monkeys: var seq[Monkey], inspectionCount: var CountTable[int]) = 
   for monkey in monkeys:
     for item in monkey.items:
       inspectionCount.inc(monkey.id)
@@ -67,8 +64,38 @@ proc playRound() =
 
     monkeys[monkey.id].items = @[]
 
-for _ in countup(1, 20):
-  playRound()
+proc subtractDivisorsMult(v: int, divisorsMult: int): int = 
+  let howMany = (v / divisorsMult).floor().toInt()
+  result = v - divisorsMult * howMany
 
-let counts =  inspectionCount.values.toSeq().sorted(system.cmp, SortOrder.Descending)
-echo counts[0] * counts[1]
+proc playRoundTwo(monkeys: var seq[Monkey], inspectionCount: var CountTable[int], divisorsMult: int) = 
+  for monkey in monkeys:
+    for item in monkey.items:
+      inspectionCount.inc(monkey.id)
+      let newItemValueBeforeLowering = calculateOperation(item, monkey)
+      let newItemValue = subtractDivisorsMult(newItemValueBeforeLowering, divisorsMult)
+
+      if newItemValue.mod(monkey.divisableTest) == 0:
+        monkeys[monkey.ifTrueMonkeyId].items.add(newItemValue)
+      else:
+        monkeys[monkey.ifFalseMonkeyId].items.add(newItemValue)
+
+    monkeys[monkey.id].items = @[]
+
+proc playGame(rounds: int, part: int): int = 
+  var monkeys = monkeysDesc.mapIt(parseMonkey(it))
+  var inspectionCount = initCountTable[int]()
+
+  for _ in countup(1, rounds):
+    if part == 1:
+      playRound(monkeys, inspectionCount)
+    else:
+      let divisorsMult = monkeys.mapIt(it.divisableTest).foldl(a * b)
+      playRoundTwo(monkeys, inspectionCount, divisorsMult)
+
+  let counts = inspectionCount.values.toSeq().sorted(system.cmp, SortOrder.Descending)
+  result = counts[0] * counts[1]
+    
+
+echo "Part 1: ", playGame(20, 1)
+echo "Part 2: ", playGame(10000, 2)
