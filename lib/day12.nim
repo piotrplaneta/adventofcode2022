@@ -40,7 +40,7 @@ proc shortestPath(start: (int, int)): int =
   
   return -1
 
-let start = (input.filterIt(it.contains('S'))[0].find('S'), input.find(input.filterIt(it.contains('S'))[0]))
+let start = grid.keys.toSeq().filterIt(grid[it] == 'S')[0]
 echo "Part one: ", shortestPath(start)
 
 let startingPoints = grid.keys.toSeq.filterIt(height(it) == height(start))
