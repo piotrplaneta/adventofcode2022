@@ -95,3 +95,25 @@ let indices_sum =
   |> List.fold_left ( + ) 0
 
 let part_one = indices_sum
+let input_part2 = Files.read_lines "lib/day13_part2.input"
+
+let part2_expressions =
+  List.map (fun line -> parse_expr (explode line)) input_part2
+
+let rec index x lst =
+  match lst with
+  | [] -> failwith "Not found"
+  | h :: t -> if x = h then 1 else 1 + index x t
+
+let sorted =
+  List.sort
+    (fun e1 e2 ->
+      match is_right_order (e1, e2) with
+      | Some true -> -1
+      | Some false -> 1
+      | None -> 0)
+    part2_expressions
+
+let part_two =
+  index (Paren [ Paren [ Number 2 ] ]) sorted
+  * index (Paren [ Paren [ Number 6 ] ]) sorted
