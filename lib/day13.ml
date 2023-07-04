@@ -1,10 +1,24 @@
-type expr = Number of int | Paren of expr list | Null
-
 let explode s = String.to_seq s |> List.of_seq
 let implode l = String.of_seq (List.to_seq l)
 
 let rec remove_last l =
   match l with [] -> [] | [ _ ] -> [] | hd :: tl -> hd :: remove_last tl
+
+let list_with_indices lst =
+  let rec list_with_indices' lst i =
+    match lst with
+    | hd :: tl -> (i, hd) :: list_with_indices' tl (i + 1)
+    | _ -> []
+  in
+
+  list_with_indices' lst 1
+
+type expr = Number of int | Paren of expr list | Null
+
+let rec index x lst =
+  match lst with
+  | [] -> failwith "Not found"
+  | h :: t -> if x = h then 1 else 1 + index x t
 
 let split_exprs line =
   let rec split_exprs' line depth acc =
@@ -40,8 +54,6 @@ let rec parse_expr expr_str =
       Number (int_of_string (implode digits))
   | err -> failwith (implode err)
 
-let input = Files.read_lines "lib/day13.input"
-
 let rec zip_with_nulls l1 l2 =
   match (l1, l2) with
   | hd1 :: tl1, hd2 :: tl2 -> (hd1, hd2) :: zip_with_nulls tl1 tl2
@@ -76,34 +88,16 @@ let rec expr_pairs lines =
       (parse_expr (explode l1), parse_expr (explode l2)) :: expr_pairs rest
   | _ -> []
 
-let are_ordered = expr_pairs input |> List.map is_right_order
+let part_one_input = Files.read_lines "lib/day13.input"
 
-let list_with_indices lst =
-  let rec list_with_indices' lst i =
-    match lst with
-    | hd :: tl -> (i, hd) :: list_with_indices' tl (i + 1)
-    | _ -> []
-  in
-
-  list_with_indices' lst 1
-
-let indices_sum =
-  are_ordered |> list_with_indices
+let part_one =
+  expr_pairs part_one_input |> List.map is_right_order |> list_with_indices
   |> List.filter (fun (_, maybe) ->
          match maybe with Some true -> true | _ -> false)
   |> List.map (fun (i, _) -> i)
   |> List.fold_left ( + ) 0
 
-let part_one = indices_sum
-let input_part2 = Files.read_lines "lib/day13_part2.input"
-
-let part2_expressions =
-  List.map (fun line -> parse_expr (explode line)) input_part2
-
-let rec index x lst =
-  match lst with
-  | [] -> failwith "Not found"
-  | h :: t -> if x = h then 1 else 1 + index x t
+let part_two_input = Files.read_lines "lib/day13_part2.input"
 
 let sorted =
   List.sort
@@ -112,7 +106,7 @@ let sorted =
       | Some true -> -1
       | Some false -> 1
       | None -> 0)
-    part2_expressions
+    (List.map (fun line -> parse_expr (explode line)) part_two_input)
 
 let part_two =
   index (Paren [ Paren [ Number 2 ] ]) sorted
