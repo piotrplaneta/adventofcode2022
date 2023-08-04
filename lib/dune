@@ -1,2 +1,5 @@
 (library
- (name adventofcode2022))
+ (name adventofcode2022)
+ (libraries base)
+ (preprocess
+  (pps ppx_jane)))

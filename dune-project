@@ -12,4 +12,4 @@
 (package
  (name adventofcode2022)
  (synopsis "Advent of Code 2022 solutions in Ocaml")
- (depends ocaml dune))
+ (depends ocaml dune base))
