@@ -14,8 +14,6 @@ module IntPair = struct
   include Comparator.Make (T)
 end
 
-let int_pair_set = Set.empty (module IntPair)
-
 let rec generate_horizontal_line x1 x2 y =
   if x1 > x2 then generate_horizontal_line x2 x1 y
   else
