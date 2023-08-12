@@ -20,79 +20,58 @@ let test_input =
 
 let input = Files.read_lines "lib/day15.input"
 
-module IntPair = struct
-  module T = struct
-    type t = int * int [@@deriving compare, sexp_of]
-  end
-
-  include T
-  include Comparator.Make (T)
-end
-
-type grid_object = Sensor | Beacon | Nothing
-
-let int_pair_map = Map.empty (module IntPair)
-
-let rec digits_and_commas s =
+let rec digits_and_separators s =
   match s with
   | [] -> []
-  | ('0' .. '9' as d) :: rest -> d :: digits_and_commas rest
-  | ',' :: rest -> ',' :: digits_and_commas rest
-  | _ :: rest -> digits_and_commas rest
-
-let parsed_input =
-  test_input
-  |> List.map ~f:(fun line ->
-         digits_and_commas (String.to_list line)
-         |> String.of_char_list |> String.split ~on:','
-         |> fun coords ->
-         match coords with
-         | [ sx; sy; bx; by ] ->
-             ( Int.of_string sx,
-               Int.of_string sy,
-               Int.of_string bx,
-               Int.of_string by )
-         | _ -> failwith "Error in data parsing")
+  | ('0' .. '9' as d) :: rest -> d :: digits_and_separators rest
+  | '-' :: rest -> '-' :: digits_and_separators rest
+  | (',' | ':') :: rest -> ',' :: digits_and_separators rest
+  | _ :: rest -> digits_and_separators rest
 
 let grid_distance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 
+let parsed_input =
+  input
+  |> List.map ~f:(fun line ->
+         digits_and_separators (String.to_list line)
+         |> String.of_char_list |> String.split ~on:','
+         |> fun coords ->
+         match coords with
+         | [ s_sx; s_sy; s_bx; s_by ] ->
+             let sx, sy, bx, by =
+               ( Int.of_string s_sx,
+                 Int.of_string s_sy,
+                 Int.of_string s_bx,
+                 Int.of_string s_by )
+             in
+             (sx, sy, bx, by, grid_distance (sx, sy) (bx, by))
+         | _ -> failwith "Error in data parsing")
+
+let min_x searched_y =
+  parsed_input
+  |> List.map ~f:(fun (sx, sy, _, _, d) -> sx - d + abs (sy - searched_y))
+  |> List.sort ~compare:Int.compare
+  |> List.hd_exn
+
+let max_x searched_y =
+  parsed_input
+  |> List.map ~f:(fun (sx, sy, _, _, d) -> sx + d - abs (sy - searched_y))
+  |> List.sort ~compare:(fun x y -> -Int.compare x y)
+  |> List.hd_exn
+
 let rec up_range from until =
-  if from < until then from :: up_range (from + 1) until else []
+  if from <= until then from :: up_range (from + 1) until else []
 
-let rec down_range from until =
-  if from > until then from :: down_range (from - 1) until else []
+let cannot_be_beacon_count searched_y =
+  up_range (min_x searched_y) (max_x searched_y)
+  |> List.filter ~f:(fun x ->
+         List.for_all
+           ~f:(fun (_, _, bx, by, _) -> (not (bx = x)) || not (by = searched_y))
+           parsed_input
+         && List.exists
+              ~f:(fun (sx, sy, _, _, d) ->
+                grid_distance (x, searched_y) (sx, sy) <= d)
+              parsed_input)
+  |> List.length
 
-let grid_range from d =
-  List.concat [ down_range from (from - d); up_range from (from + d) ]
-  |> List.remove_consecutive_duplicates ~equal:( = )
-
-let update grid (x, y) v =
-  match Map.find grid (x, y) with
-  | None -> Map.add_exn ~key:(x, y) ~data:v grid
-  | _ -> grid
-
-let add_empty_holes_from_beacon (x, y) d grid =
-  let x_range, y_range = (grid_range x d, grid_range y d) in
-  let empty_slots =
-    List.cartesian_product x_range y_range
-    |> List.filter ~f:(fun (slot_x, slot_y) ->
-           grid_distance (x, y) (slot_x, slot_y) < d)
-  in
-  List.fold ~init:grid
-    ~f:(fun grid_acc (slot_x, slot_y) ->
-      update grid_acc (slot_x, slot_y) Nothing)
-    empty_slots
-
-let init_grid =
-  List.fold
-    ~init:(Map.empty (module IntPair))
-    ~f:(fun grid (sx, sy, bx, by) ->
-      let grid_with_sensor = update grid (sx, sy) Sensor in
-      let grid_with_beacon = update grid_with_sensor (bx, by) Beacon in
-      add_empty_holes_from_beacon (sx, sy)
-        (grid_distance (sx, sy) (bx, by))
-        grid_with_beacon)
-    parsed_input
-
-let part_one =
-  init_grid |> Map.filter_keys ~f:(fun (_, y) -> y = 10) |> Map.length
+let part_one = cannot_be_beacon_count 2000000
