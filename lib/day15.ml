@@ -75,3 +75,33 @@ let cannot_be_beacon_count searched_y =
   |> List.length
 
 let part_one = cannot_be_beacon_count 2000000
+
+let is_beacon (x, y) =
+  List.for_all
+    ~f:(fun (sx, sy, _, _, d) ->
+      x >= 0 && x <= 4000000 && y >= 0 && y <= 4000000
+      && grid_distance (x, y) (sx, sy) > d)
+    parsed_input
+
+let process_border (sx, sy, _, _, d) =
+  let rec process_border' (x, y) (dx, dy) =
+    match (x, y) with
+    | _ when is_beacon (x, y) -> Some (x, y)
+    | _ when x = sx - d && y = sy + 1 -> None
+    | _ when x = sx && y = sy - d - 1 -> process_border' (x + 1, y + 1) (1, 1)
+    | _ when x = sx + d + 1 && y = sy -> process_border' (x - 1, y + 1) (-1, 1)
+    | _ when x = sx && y = sy + d + 1 -> process_border' (x - 1, y - 1) (-1, -1)
+    | _ -> process_border' (x + dx, y + dy) (dx, dy)
+  in
+  process_border' (sx - d - 1, sy) (1, -1)
+
+let find_beacon =
+  List.fold_until ~init:None
+    ~f:(fun _ l ->
+      match process_border l with
+      | Some (x, y) -> Stop (x, y)
+      | None -> Continue None)
+    ~finish:(fun _ -> (-1, -1))
+    parsed_input
+
+let part_two = find_beacon |> fun (x, y) -> (x * 4000000) + y
